@@ -1,0 +1,19 @@
+{
+  "name": "bitte-ai-mcp-proxy",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun --watch run index.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@mcp-sdk/server": "^0.0.3",
+    "zod": "^3.24.2"
+  }
+}
