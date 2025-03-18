@@ -1,0 +1,22 @@
+{
+  "name": "@mcp-proxy/extra-tools",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun --watch run index.ts",
+    "build": "bun build index.ts --outdir ./dist",
+    "lint": "biome check .",
+    "format": "biome format ."
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@mcp-sdk/server": "0.0.7",
+    "zod": "^3.24.2"
+  }
+}

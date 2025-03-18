@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  bitte-ai:
+    build:
+      context: .
+      dockerfile: ./packages/bitte-ai/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - BITTE_REGISTRY_URL=${BITTE_REGISTRY_URL}
+      - BITTE_RUNTIME_URL=${BITTE_RUNTIME_URL}
+      - BITTE_API_KEY=${BITTE_API_KEY}
+    volumes:
+      - ./packages/bitte-ai:/app/packages/bitte-ai
+      - /app/packages/bitte-ai/node_modules
+    command: bun run dev
+    restart: unless-stopped
+
+  extra-tools:
+    build:
+      context: .
+      dockerfile: ./packages/extra-tools/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - EXTRA_TOOLS_API_KEY=${EXTRA_TOOLS_API_KEY}
+    volumes:
+      - ./packages/extra-tools:/app/packages/extra-tools
+      - /app/packages/extra-tools/node_modules
+    command: bun run dev
+    restart: unless-stopped
+    depends_on:
+      - bitte-ai 

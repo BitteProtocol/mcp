@@ -1,19 +1,32 @@
 {
-  "name": "bitte-ai-mcp-proxy",
-  "module": "index.ts",
+  "name": "mcp-proxy",
+  "private": true,
+  "workspaces": ["packages/*"],
   "type": "module",
+  "packageManager": "bun@1.2.1",
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "scripts": {
-    "start": "bun run index.ts",
-    "dev": "bun --watch run index.ts"
-  },
-  "peerDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "latest",
+    "turbo": "^2.4.4",
     "typescript": "^5.0.0"
   },
+  "scripts": {
+    "start:bitte-ai": "bun run --cwd packages/bitte-ai start",
+    "dev:bitte-ai": "bun run --cwd packages/bitte-ai dev",
+    "start:extra-tools": "bun run --cwd packages/extra-tools start",
+    "dev:extra-tools": "bun run --cwd packages/extra-tools dev",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint && biome check .",
+    "lint:fix": "biome check --apply .",
+    "format": "turbo format && biome format .",
+    "format:fix": "biome format --write .",
+    "start:all": "bun run ./scripts/start-dev.ts",
+    "docker:up": "bun run ./scripts/start-all.ts",
+    "docker:down": "bun run ./scripts/docker-down.ts"
+  },
   "dependencies": {
-    "@mcp-sdk/server": "^0.0.3",
-    "zod": "^3.24.2"
+    "concurrently": "^8.2.2"
   }
 }
