@@ -13,7 +13,7 @@
         "typescript": "^5.0.0",
       },
     },
-    "packages/bitte-ai": {
+    "apps/bitte-ai": {
       "name": "@mcp-proxy/bitte-ai",
       "dependencies": {
         "@goat-sdk/adapter-model-context-protocol": "^0.2.11",
@@ -25,22 +25,6 @@
       "devDependencies": {
         "@types/bun": "latest",
         "tsup": "^8.4.0",
-      },
-      "peerDependencies": {
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/extra-tools": {
-      "name": "@mcp-proxy/extra-tools",
-      "dependencies": {
-        "@goat-sdk/adapter-model-context-protocol": "^0.2.11",
-        "@goat-sdk/core": "^0.4.9",
-        "@goat-sdk/plugin-erc20": "^0.2.14",
-        "@mcp-sdk/server": "0.0.7",
-        "zod": "^3.24.2",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
       },
       "peerDependencies": {
         "typescript": "^5.0.0",
@@ -140,9 +124,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.25", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ=="],
 
-    "@mcp-proxy/bitte-ai": ["@mcp-proxy/bitte-ai@workspace:packages/bitte-ai"],
-
-    "@mcp-proxy/extra-tools": ["@mcp-proxy/extra-tools@workspace:packages/extra-tools"],
+    "@mcp-proxy/bitte-ai": ["@mcp-proxy/bitte-ai@workspace:apps/bitte-ai"],
 
     "@mcp-sdk/server": ["@mcp-sdk/server@0.0.7", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.6.1", "file-type": "^20.4.1", "fuse.js": "^7.1.0", "mcp-proxy": "^2.7.0", "strict-event-emitter-types": "^2.0.0", "uri-templates": "^0.2.0", "zod": "^3.24.2", "zod-to-json-schema": "^3.24.3" }, "peerDependencies": { "typescript": "^5.8.2" } }, "sha512-CHU8v1P7DXtdSj/ONRRHgga8Q/L14Eag7u4bR3JofwJAPMEwuG/TQ4wfna/jebUd/2I7byaSKXbWPMyanLo69A=="],
 
@@ -598,8 +580,6 @@
 
     "@mcp-proxy/bitte-ai/@types/bun": ["@types/bun@1.2.5", "", { "dependencies": { "bun-types": "1.2.5" } }, "sha512-w2OZTzrZTVtbnJew1pdFmgV99H0/L+Pvw+z1P67HaR18MHOzYnTYOi6qzErhK8HyT+DB782ADVPPE92Xu2/Opg=="],
 
-    "@mcp-proxy/extra-tools/@types/bun": ["@types/bun@1.2.5", "", { "dependencies": { "bun-types": "1.2.5" } }, "sha512-w2OZTzrZTVtbnJew1pdFmgV99H0/L+Pvw+z1P67HaR18MHOzYnTYOi6qzErhK8HyT+DB782ADVPPE92Xu2/Opg=="],
-
     "@mcp-sdk/server/@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.6.1", "", { "dependencies": { "content-type": "^1.0.5", "cors": "^2.8.5", "eventsource": "^3.0.2", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "pkce-challenge": "^4.1.0", "raw-body": "^3.0.0", "zod": "^3.23.8", "zod-to-json-schema": "^3.24.1" } }, "sha512-oxzMzYCkZHMntzuyerehK3fV6A2Kwh5BD6CGEJSVDU2QNEhfLOptf2X7esQgaHZXHZY0oHmMsOtIDLP71UJXgA=="],
 
     "@mcp-sdk/server/zod-to-json-schema": ["zod-to-json-schema@3.24.3", "", { "peerDependencies": { "zod": "^3.24.1" } }, "sha512-HIAfWdYIt1sssHfYZFCXp4rU1w2r8hVVXYIlmoa0r0gABLs5di3RCqPU5DDROogVz1pAdYBaz7HK5n9pSUNs3A=="],
@@ -627,8 +607,6 @@
     "@isaacs/cliui/wrap-ansi/ansi-styles": ["ansi-styles@6.2.1", "", {}, "sha512-bN798gFfQX+viw3R7yrGWRqnrN2oRkEkUjjl4JNn4E8GxxbjtG3FbrEIIY3l8/hrwUwIeCZvi4QuOTP4MErVug=="],
 
     "@mcp-proxy/bitte-ai/@types/bun/bun-types": ["bun-types@1.2.5", "", { "dependencies": { "@types/node": "*", "@types/ws": "~8.5.10" } }, "sha512-3oO6LVGGRRKI4kHINx5PIdIgnLRb7l/SprhzqXapmoYkFl5m4j6EvALvbDVuuBFaamB46Ap6HCUxIXNLCGy+tg=="],
-
-    "@mcp-proxy/extra-tools/@types/bun/bun-types": ["bun-types@1.2.5", "", { "dependencies": { "@types/node": "*", "@types/ws": "~8.5.10" } }, "sha512-3oO6LVGGRRKI4kHINx5PIdIgnLRb7l/SprhzqXapmoYkFl5m4j6EvALvbDVuuBFaamB46Ap6HCUxIXNLCGy+tg=="],
 
     "express/debug/ms": ["ms@2.1.2", "", {}, "sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w=="],
 

@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     // Enable latest features
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
     "allowJs": true,
-
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -14,14 +15,18 @@
     "noEmit": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-
     // Best practices
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@mcp-proxy/bitte-ai/*": ["./packages/bitte-ai/*"],
-      "@mcp-proxy/extra-tools/*": ["./packages/extra-tools/*"]
+      "@mcp-proxy/bitte-ai/*": [
+        "./apps/bitte-ai/*"
+      ],
     },
     "baseUrl": "."
   },
-  "references": [{ "path": "./packages/bitte-ai" }, { "path": "./packages/extra-tools" }]
+  "references": [
+    {
+      "path": "./apps/bitte-ai"
+    }
+  ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "mcp-proxy",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "apps/*"],
   "type": "module",
   "packageManager": "bun@1.2.1",
   "devDependencies": {

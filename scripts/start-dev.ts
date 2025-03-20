@@ -14,7 +14,7 @@ if (!existsSync('.env')) {
 const services = [
   {
     name: 'bitte-ai',
-    dir: 'packages/bitte-ai',
+    dir: 'apps/bitte-ai',
     port: 3000,
   },
 ];

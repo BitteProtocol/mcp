@@ -5,7 +5,7 @@ services:
     container_name: bitte-ai-mcp-proxy
     build:
       context: .
-      dockerfile: ./packages/bitte-ai/Dockerfile
+      dockerfile: ./apps/bitte-ai/Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -16,8 +16,8 @@ services:
       - PORT=3000
       - NODE_ENV=production
     volumes:
-      - ./packages/bitte-ai:/app/packages/bitte-ai
-      - /app/packages/bitte-ai/node_modules
+      - ./apps/bitte-ai:/app/apps/bitte-ai
+      - /app/apps/bitte-ai/node_modules
     command: bun run dev
     restart: unless-stopped
     healthcheck:

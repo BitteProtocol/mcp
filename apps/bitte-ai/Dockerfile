@@ -3,13 +3,13 @@ FROM oven/bun:1.2.1
 WORKDIR /app
 
 COPY package.json bun.lock ./
-COPY packages/bitte-ai/package.json ./packages/bitte-ai/
+COPY apps/bitte-ai/package.json ./apps/bitte-ai/
 
 RUN bun install
 
 COPY . .
 
-WORKDIR /app/packages/bitte-ai
+WORKDIR /app/apps/bitte-ai
 
 # Build the application
 RUN bun run build
