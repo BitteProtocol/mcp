@@ -1,10 +1,7 @@
 {
-    "mcpServers": {
-      "bitte-ai": {
-        "url": "http://localhost:3000/sse"
-      },
-      "extra-tools": {
-        "url": "http://localhost:3001/sse"
-      }
+  "mcpServers": {
+    "bitte-ai": {
+      "url": "http://localhost:3000/sse"
     }
   }
+}

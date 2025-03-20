@@ -245,13 +245,13 @@ server.addTool({
   parameters: z.object({}),
   execute: async (args, { log }) => {
     log.info('Executing get-available-services tool');
-    
+
     // Return the list of available services
     const services = ['goat'];
-    
+
     return JSON.stringify({
       services,
-      count: services.length
+      count: services.length,
     });
   },
 });
@@ -269,7 +269,7 @@ server.addTool({
 
     switch (args.tool) {
       case 'goat':
-        const tool = goatTools.find(t => t.name === args.tool);
+        const tool = goatTools.find((t) => t.name === args.tool);
         if (!tool) {
           throw new Error(`Tool not found: ${args.tool}`);
         }

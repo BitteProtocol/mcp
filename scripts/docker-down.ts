@@ -12,6 +12,6 @@ dockerDown.on('close', (code) => {
     console.error(`docker-compose down failed with exit code ${code}`);
     process.exit(code);
   }
-  
+
   console.log('All services have been stopped.');
-}); 
+});

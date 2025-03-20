@@ -15,8 +15,8 @@ const services = [
   {
     name: 'bitte-ai',
     dir: 'packages/bitte-ai',
-    port: 3000
-  }
+    port: 3000,
+  },
 ];
 
 // Array to store child processes
@@ -41,26 +41,26 @@ console.log('Starting all services...\n');
 // Start each service
 for (const service of services) {
   console.log(`Starting ${service.name} on port ${service.port}...`);
-  
+
   const proc = spawn('bun', ['run', 'dev'], {
     cwd: join(process.cwd(), service.dir),
     env: { ...process.env, PORT: service.port.toString() },
-    stdio: 'pipe'
+    stdio: 'pipe',
   });
-  
+
   // Store the process
   processes.push(proc);
-  
+
   // Handle standard output
   proc.stdout.on('data', (data) => {
     console.log(`[${service.name}] ${data.toString().trim()}`);
   });
-  
+
   // Handle standard error
   proc.stderr.on('data', (data) => {
     console.error(`[${service.name}] ${data.toString().trim()}`);
   });
-  
+
   // Handle process exit
   proc.on('close', (code) => {
     console.log(`[${service.name}] process exited with code ${code}`);
@@ -75,4 +75,4 @@ for (const service of services) {
 console.log('\nPress Ctrl+C to stop all services.');
 
 // This keeps the script running
-process.stdin.resume(); 
+process.stdin.resume();

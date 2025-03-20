@@ -5,7 +5,6 @@ This monorepo contains MCP (Model Control Protocol) servers for different servic
 ## Packages
 
 - **bitte-ai**: MCP server for Bitte AI integrations
-- **extra-tools**: Additional tools for extending MCP functionality
 
 ## Setup
 
@@ -58,9 +57,6 @@ bun run format:fix
 ```bash
 # Run bitte-ai service
 bun run dev:bitte-ai
-
-# Run extra-tools service
-bun run dev:extra-tools
 ```
 
 ## Adding a new package

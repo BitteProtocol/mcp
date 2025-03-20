@@ -17,6 +17,6 @@ export default defineConfig({
     'zod',
     '@goat-sdk/adapter-model-context-protocol',
     '@goat-sdk/core',
-    '@goat-sdk/plugin-erc20'
-  ]
-}); 
+    '@goat-sdk/plugin-erc20',
+  ],
+});

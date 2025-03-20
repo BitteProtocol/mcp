@@ -22,10 +22,10 @@ dockerUp.on('close', (code) => {
 
   // Display running services
   const dockerPs = spawn('docker-compose', ['ps'], { stdio: 'inherit' });
-  
+
   dockerPs.on('close', () => {
     console.log('');
     console.log('Services are now running:');
     console.log('- Bitte AI: http://localhost:3000');
   });
-}); 
+});
