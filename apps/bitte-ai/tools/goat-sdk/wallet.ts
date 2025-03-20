@@ -1,4 +1,4 @@
-import { ToolBase, WalletClientBase } from '@goat-sdk/core';
+import { type ToolBase, WalletClientBase } from '@goat-sdk/core';
 
 // Create a concrete implementation of WalletClientBase
 class SimpleWallet extends WalletClientBase {
@@ -16,6 +16,8 @@ class SimpleWallet extends WalletClientBase {
   }
 
   getChain() {
+    // Use the original any type since we don't have access to the Chain type definition
+    // and this is a mock implementation for development purposes
     return { id: this.chainId } as any;
   }
 

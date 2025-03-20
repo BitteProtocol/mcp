@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 
 console.log('Stopping all Docker services...');
 

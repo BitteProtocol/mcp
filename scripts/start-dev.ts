@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
-import { existsSync } from 'fs';
-import { spawn } from 'child_process';
-import { join } from 'path';
+import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 // Check if .env file exists
 if (!existsSync('.env')) {

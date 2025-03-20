@@ -67,8 +67,9 @@ server.addTool({
       }
       const data = await response.json();
       return JSON.stringify(data);
-    } catch (error: any) {
-      log.error(`Error fetching agents: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error fetching agents: ${errorMessage}`);
       return {
         content: [
           {
@@ -112,8 +113,9 @@ server.addTool({
       }
       const data = await response.json();
       return JSON.stringify(data);
-    } catch (error: any) {
-      log.error(`Error fetching agent: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error fetching agent: ${errorMessage}`);
 
       return {
         content: [
@@ -147,8 +149,9 @@ server.addTool({
       }
       const data = await response.json();
       return JSON.stringify(data);
-    } catch (error: any) {
-      log.error(`Error fetching tools: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error fetching tools: ${errorMessage}`);
       return {
         content: [
           {
@@ -202,13 +205,14 @@ server.addTool({
           },
         ],
       };
-    } catch (error: any) {
-      log.error(`Error executing agent: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error executing agent: ${errorMessage}`);
       return {
         content: [
           {
             type: 'text',
-            text: `Error executing agent: ${error.message}`,
+            text: `Error executing agent: ${errorMessage}`,
           },
         ],
         isError: true,
@@ -268,12 +272,13 @@ server.addTool({
     log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
 
     switch (args.tool) {
-      case 'goat':
+      case 'goat': {
         const tool = goatTools.find((t) => t.name === args.tool);
         if (!tool) {
           throw new Error(`Tool not found: ${args.tool}`);
         }
         return await tool.execute(args.params);
+      }
       default:
         throw new Error(`Unknown tool: ${args.tool}`);
     }
@@ -294,5 +299,5 @@ export async function startServer(port = 3000) {
   return server;
 }
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3000;
 startServer(port);
