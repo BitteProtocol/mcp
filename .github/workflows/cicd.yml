@@ -42,6 +42,8 @@ jobs:
           registry: europe-west1-docker.pkg.dev
           username: _json_key
           password: ${{ secrets.GCP_SA_KEY }}
+        id: login
+        continue-on-error: false
 
       - name: Build and push Docker image
         run: |
