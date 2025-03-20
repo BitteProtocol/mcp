@@ -2,7 +2,29 @@ import { MCP } from '@mcp-sdk/server';
 import { z } from 'zod';
 import { config } from './config';
 
-const server = new MCP({
+// Export configuration
+export { config } from './config';
+
+// Export interfaces for tool parameters
+export interface GetAllAgentsParams {
+  verifiedOnly?: boolean;
+  chainIds?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface GetAgentByIdParams {
+  agentId: string;
+}
+
+export interface ExecuteAgentParams {
+  agentId: string;
+  input: string;
+}
+
+// Create and export the server
+export const server = new MCP({
   name: 'bitte-ai-mcp-proxy',
   version: '0.0.1',
   authenticate: async (req) => {
@@ -192,10 +214,25 @@ server.addTool({
   },
 });
 
-server.start({
-  transportType: 'sse',
-  sse: {
-    endpoint: '/sse',
-    port: 3000,
-  },
-});
+// Export a function to start the server
+export async function startServer(port = 3000) {
+  server.start({
+    transportType: 'sse',
+    sse: {
+      endpoint: '/sse',
+      port,
+      host: '0.0.0.0',
+    },
+  });
+  console.log(`Bitte AI MCP Proxy server is running on port ${port}`);
+  return server;
+}
+
+// Start the server if this file is run directly
+if (import.meta.url === Bun.main) {
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  startServer(port);
+}
+
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+startServer(port);

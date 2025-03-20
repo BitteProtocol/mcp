@@ -1,14 +1,21 @@
 {
   "name": "@mcp-proxy/bitte-ai",
-  "module": "index.ts",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "tsup": "^8.4.0"
   },
   "scripts": {
-    "start": "bun run index.ts",
+    "start": "bun run dist/index.js",
     "dev": "bun --watch run index.ts",
-    "build": "bun build index.ts --outdir ./dist",
+    "build": "tsup",
+    "watch": "tsup --watch",
     "lint": "biome check .",
     "format": "biome format ."
   },

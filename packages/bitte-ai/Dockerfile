@@ -11,6 +11,10 @@ COPY . .
 
 WORKDIR /app/packages/bitte-ai
 
+# Build the application
+RUN bun run build
+
 EXPOSE 3000
 
-CMD ["bun", "run", "dev"] 
+# Run the compiled application
+CMD ["bun", "run", "start"] 

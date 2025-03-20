@@ -11,6 +11,10 @@ COPY . .
 
 WORKDIR /app/packages/extra-tools
 
+# Build the application
+RUN bun run build
+
 EXPOSE 3001
 
-CMD ["bun", "run", "dev"] 
+# Run the compiled application
+CMD ["bun", "run", "start"] 
