@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     // Enable latest features
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
@@ -18,9 +16,7 @@
     // Best practices
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@mcp-proxy/bitte-ai/*": [
-        "./apps/bitte-ai/*"
-      ],
+      "@mcp-proxy/bitte-ai/*": ["./apps/bitte-ai/*"]
     },
     "baseUrl": "."
   },
