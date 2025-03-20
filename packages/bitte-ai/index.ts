@@ -1,6 +1,7 @@
 import { MCP } from '@mcp-sdk/server';
 import { z } from 'zod';
 import { config } from './config';
+import { tools as goatTools } from './tools/goat-sdk';
 
 // Export configuration
 export { config } from './config';
@@ -131,7 +132,9 @@ server.addTool({
 server.addTool({
   name: 'get-all-tools',
   description: 'Get a list of tools from the Bitte AI registry',
-  parameters: z.object({}),
+  parameters: z.object({
+    random_string: z.string().optional().describe('Dummy parameter for no-parameter tools'),
+  }),
   execute: async (args, { log }) => {
     log.info('Getting tools');
 
@@ -214,6 +217,69 @@ server.addTool({
   },
 });
 
+// Add tools from extra-tools
+
+// Tool to get existing tools
+server.addTool({
+  name: 'get-existing-tools',
+  description: 'Get existing tools',
+  parameters: z.object({
+    service: z.string().describe('The service to get tools from'),
+  }),
+  execute: async (args, { log }) => {
+    log.info(`Executing get-existing-tools tool with params: ${JSON.stringify(args)}`);
+
+    switch (args.service) {
+      case 'goat':
+        return JSON.stringify(goatTools);
+      default:
+        throw new Error(`Unknown service: ${args.service}`);
+    }
+  },
+});
+
+// Tool to get available services
+server.addTool({
+  name: 'get-available-services',
+  description: 'Get a list of all available services',
+  parameters: z.object({}),
+  execute: async (args, { log }) => {
+    log.info('Executing get-available-services tool');
+    
+    // Return the list of available services
+    const services = ['goat'];
+    
+    return JSON.stringify({
+      services,
+      count: services.length
+    });
+  },
+});
+
+// Tool to execute a tool
+server.addTool({
+  name: 'execute-tool',
+  description: 'Execute a tool',
+  parameters: z.object({
+    tool: z.string().describe('The tool to execute'),
+    params: z.object({}).describe('The parameters to pass to the tool'),
+  }),
+  execute: async (args, { log }) => {
+    log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
+
+    switch (args.tool) {
+      case 'goat':
+        const tool = goatTools.find(t => t.name === args.tool);
+        if (!tool) {
+          throw new Error(`Tool not found: ${args.tool}`);
+        }
+        return await tool.execute(args.params);
+      default:
+        throw new Error(`Unknown tool: ${args.tool}`);
+    }
+  },
+});
+
 // Export a function to start the server
 export async function startServer(port = 3000) {
   server.start({
@@ -226,12 +292,6 @@ export async function startServer(port = 3000) {
   });
   console.log(`Bitte AI MCP Proxy server is running on port ${port}`);
   return server;
-}
-
-// Start the server if this file is run directly
-if (import.meta.url === Bun.main) {
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-  startServer(port);
 }
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

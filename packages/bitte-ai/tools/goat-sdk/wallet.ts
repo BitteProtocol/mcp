@@ -49,4 +49,4 @@ class SimpleWallet extends WalletClientBase {
 export const wallet = new SimpleWallet(
     "0x0000000000000000000000000000000000000000",
     "base"
-);
+); 

@@ -11,10 +11,6 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "start:bitte-ai": "bun run --cwd packages/bitte-ai start",
-    "dev:bitte-ai": "bun run --cwd packages/bitte-ai dev",
-    "start:extra-tools": "bun run --cwd packages/extra-tools start",
-    "dev:extra-tools": "bun run --cwd packages/extra-tools dev",
     "dev": "turbo dev",
     "build": "turbo build",
     "start": "turbo start",

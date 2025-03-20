@@ -27,6 +27,5 @@ dockerUp.on('close', (code) => {
     console.log('');
     console.log('Services are now running:');
     console.log('- Bitte AI: http://localhost:3000');
-    console.log('- Extra Tools: http://localhost:3001');
   });
 }); 

@@ -17,4 +17,4 @@ export const tools: ToolBase[] = onChainToolsAdapter.listOfTools().map(toolDef =
             return onChainToolsAdapter.toolHandler(toolDef.name, params);
         }
     } as unknown as ToolBase;
-});
+}); 

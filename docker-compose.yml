@@ -1,7 +1,8 @@
-version: '3'
+version: '3.8'
 
 services:
   bitte-ai:
+    container_name: bitte-ai-mcp-proxy
     build:
       context: .
       dockerfile: ./packages/bitte-ai/Dockerfile
@@ -11,24 +12,27 @@ services:
       - BITTE_REGISTRY_URL=${BITTE_REGISTRY_URL}
       - BITTE_RUNTIME_URL=${BITTE_RUNTIME_URL}
       - BITTE_API_KEY=${BITTE_API_KEY}
+      - EXTRA_TOOLS_API_KEY=${EXTRA_TOOLS_API_KEY}
+      - PORT=3000
+      - NODE_ENV=production
     volumes:
       - ./packages/bitte-ai:/app/packages/bitte-ai
       - /app/packages/bitte-ai/node_modules
     command: bun run dev
     restart: unless-stopped
-
-  extra-tools:
-    build:
-      context: .
-      dockerfile: ./packages/extra-tools/Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - EXTRA_TOOLS_API_KEY=${EXTRA_TOOLS_API_KEY}
-    volumes:
-      - ./packages/extra-tools:/app/packages/extra-tools
-      - /app/packages/extra-tools/node_modules
-    command: bun run dev
-    restart: unless-stopped
-    depends_on:
-      - bitte-ai 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/sse"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M

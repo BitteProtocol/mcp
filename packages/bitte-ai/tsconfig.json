@@ -22,5 +22,15 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "include": ["**/*.ts"]
+  "include": [
+    "index.ts", 
+    "config.ts", 
+    "tools/**/*.ts"
+  ],
+  "files": [
+    "index.ts", 
+    "config.ts", 
+    "tools/goat-sdk/index.ts", 
+    "tools/goat-sdk/wallet.ts"
+  ]
 }

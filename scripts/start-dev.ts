@@ -16,11 +16,6 @@ const services = [
     name: 'bitte-ai',
     dir: 'packages/bitte-ai',
     port: 3000
-  },
-  {
-    name: 'extra-tools',
-    dir: 'packages/extra-tools',
-    port: 3001
   }
 ];
 
