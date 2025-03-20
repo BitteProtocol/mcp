@@ -96,4 +96,5 @@ jobs:
             --project ${{ secrets.GCP_PROJECT }} \
             --update-env-vars "$ENV" \
             --update-secrets "$SECRETS" \
+            --service-account=bitte-ai-mcp@${{ secrets.GCP_PROJECT }}.iam.gserviceaccount.com \
             --allow-unauthenticated 
