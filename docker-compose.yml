@@ -12,7 +12,6 @@ services:
       - BITTE_REGISTRY_URL=${BITTE_REGISTRY_URL}
       - BITTE_RUNTIME_URL=${BITTE_RUNTIME_URL}
       - BITTE_API_KEY=${BITTE_API_KEY}
-      - EXTRA_TOOLS_API_KEY=${EXTRA_TOOLS_API_KEY}
       - PORT=3000
       - NODE_ENV=production
     volumes:

@@ -1,0 +1,95 @@
+name: CICD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['*']
+
+jobs:
+  build:
+    name: CICD
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm and modules
+        run: |
+          npm install -g pnpm
+          pnpm install
+
+      - name: Check format and lint
+        run: |
+          pnpm run format:check
+          pnpm run lint
+
+        # TODO: tests
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Google Artifact Registry
+        uses: docker/login-action@v1
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_NAME=europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/bitte-mcp-sse/bitte-mcp-sse
+          docker build -t $IMAGE_NAME:${GITHUB_SHA::6} -t $IMAGE_NAME:latest -f apps/bitte-ai/Dockerfile .
+          docker push $IMAGE_NAME:${GITHUB_SHA::6}
+          docker push $IMAGE_NAME:latest
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE_NAME=europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/bitte-mcp-sse/bitte-mcp-sse:${GITHUB_SHA::6}
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            SERVICE_NAME=bitte-mcp-sse
+          else
+            SERVICE_NAME=bitte-mcp-sse-debug
+          fi
+          SECRETS='OPENAI_API_KEY=OPENAI_API_KEY:latest'
+          SECRETS+=',ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest'
+          SECRETS+=',XAI_API_KEY=XAI_API_KEY:latest'
+          SECRETS+=',GCP_SERVICE_ACCOUNT_KEY=FIREBASE_SERVICE_ACCOUNT_KEY:latest'
+          SECRETS+=',DISCOVERY_AGENT_ID=DISCOVERY_AGENT_ID:latest'
+          SECRETS+=',DISCOVERY_VECTOR_STORE_ID=DISCOVERY_VECTOR_STORE_ID:latest'
+          SECRETS+=',PIMLICO_KEY=PIMLICO_KEY:latest'
+          SECRETS+=',KV_REST_API_URL=KV_REST_API_URL:latest'
+          SECRETS+=',KV_REST_API_TOKEN=KV_REST_API_TOKEN:latest'
+          SECRETS+=',UNKEY_API_ID=UNKEY_API_ID:latest'
+          SECRETS+=',UNKEY_API_KEY=UNKEY_API_KEY:latest'
+          SECRETS+=',BITTE_API_KEY=BITTE_API_KEY:latest'
+
+          ENV='NEAR_RPC_URL=https://free.rpc.fastnear.com/'
+          ENV+=',NEAR_NETWORK_ID=mainnet'
+          ENV+=',GCP_PROJECT_ID=${{ secrets.GCP_PROJECT }}'
+          ENV+=',BITTE_REGISTRY_URL=https://registry.bitte.ai'
+          ENV+=',BITTE_RUNTIME_URL=https://api.bitte.ai'
+
+          gcloud run deploy $SERVICE_NAME \
+            --image $IMAGE_NAME \
+            --region europe-west1 \
+            --project ${{ secrets.GCP_PROJECT }} \
+            --update-env-vars "$ENV" \
+            --update-secrets "$SECRETS" \
+            --service-account ai-runtime@mintbase-wallet.iam.gserviceaccount.com \
+            --allow-unauthenticated 
