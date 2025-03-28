@@ -1,7 +1,7 @@
 import { MCP } from '@mcp-sdk/server';
 import { z } from 'zod';
 import { config } from './config';
-import { tools as goatTools } from './tools/goat-sdk';
+import { services } from './tools';
 
 // Export configuration
 export { config } from './config';
@@ -234,8 +234,12 @@ server.addTool({
     log.info(`Executing get-existing-tools tool with params: ${JSON.stringify(args)}`);
 
     switch (args.service) {
-      case 'goat':
+      case services.goat.name:
+        const goatTools = await services.goat.tools();
         return JSON.stringify(goatTools);
+      case services.agentkit.name:
+        const baseAgentkitTools = await services.agentkit.tools();
+        return JSON.stringify(baseAgentkitTools);
       default:
         throw new Error(`Unknown service: ${args.service}`);
     }
@@ -250,12 +254,9 @@ server.addTool({
   execute: async (args, { log }) => {
     log.info('Executing get-available-services tool');
 
-    // Return the list of available services
-    const services = ['goat'];
-
     return JSON.stringify({
-      services,
-      count: services.length,
+      services: Object.values(services).map((service) => service.name),
+      count: Object.keys(services).length,
     });
   },
 });
@@ -266,20 +267,44 @@ server.addTool({
   description: 'Execute a tool',
   parameters: z.object({
     tool: z.string().describe('The tool to execute'),
+    service: z.string().describe('The service to execute the tool from'),
     params: z.object({}).describe('The parameters to pass to the tool'),
   }),
   execute: async (args, { log }) => {
     log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
+    console.log(`[execute-tool] Starting execution for tool: ${args.tool} from service: ${args.service} with params: ${JSON.stringify(args.params)}`);
 
-    switch (args.tool) {
-      case 'goat': {
+    switch (args.service) {
+      case services.goat.name: {
+        console.log(`[execute-tool] Fetching GOAT tools`);
+        const goatTools = await services.goat.tools();
+        console.log(`[execute-tool] Found ${goatTools.length} GOAT tools`);
         const tool = goatTools.find((t) => t.name === args.tool);
         if (!tool) {
+          console.error(`[execute-tool] Tool not found: ${args.tool}`);
           throw new Error(`Tool not found: ${args.tool}`);
         }
-        return await tool.execute(args.params);
+        console.log(`[execute-tool] Executing GOAT tool: ${args.tool} with params:`, args.params);
+        const result = await tool.execute(args.params);
+        console.log(`[execute-tool] GOAT tool execution completed`);
+        return result;
+      }
+      case services.agentkit.name: {
+        console.log(`[execute-tool] Fetching AgentKit tools`);
+        const baseAgentkitTools = await services.agentkit.tools();
+        console.log(`[execute-tool] Found ${baseAgentkitTools.length} AgentKit tools`);
+        const tool = baseAgentkitTools.find((t) => t.name === args.tool);
+        if (!tool) {
+          console.error(`[execute-tool] Tool not found: ${args.tool}`);
+          throw new Error(`Tool not found: ${args.tool}`);
+        }
+        console.log(`[execute-tool] Executing AgentKit tool: ${args.tool} with params:`, JSON.stringify(args.params));
+        const result = await tool.execute(args.params);
+        console.log(`[execute-tool] AgentKit tool execution completed`);
+        return result;
       }
       default:
+        console.error(`[execute-tool] Unknown tool: ${args.tool}`);
         throw new Error(`Unknown tool: ${args.tool}`);
     }
   },
