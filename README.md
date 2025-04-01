@@ -2,6 +2,21 @@
 
 This monorepo contains MCP (Model Control Protocol) servers for different services.
 
+## Server URI
+`https://mcp.bitte.ai/sse`
+
+## Add to Curser Settings
+```
+{
+  "mcpServers": {
+    "bitte-ai": {
+      "url": "https://mcp.bitte.ai/sse"
+    }
+  }
+}
+```
+
+
 ## Packages
 
 - **bitte-ai**: MCP server for Bitte AI integrations
