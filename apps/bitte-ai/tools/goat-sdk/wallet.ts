@@ -1,11 +1,12 @@
-import { type ToolBase, WalletClientBase } from '@goat-sdk/core';
+import { type Chain, type ToolBase, WalletClientBase } from '@goat-sdk/core';
+import { mainnet } from 'viem/chains';
 
 // Create a concrete implementation of WalletClientBase
 class SimpleWallet extends WalletClientBase {
   private address: string;
-  private chainId: string;
+  private chainId: number;
 
-  constructor(address: string, chainId: string) {
+  constructor(address: string, chainId: number) {
     super();
     this.address = address;
     this.chainId = chainId;
@@ -18,7 +19,7 @@ class SimpleWallet extends WalletClientBase {
   getChain() {
     // Use the original any type since we don't have access to the Chain type definition
     // and this is a mock implementation for development purposes
-    return { id: this.chainId } as any;
+    return { id: this.chainId } as Chain;
   }
 
   async signMessage(message: string): Promise<{ signature: string; transactionURL: string }> {
@@ -51,4 +52,4 @@ class SimpleWallet extends WalletClientBase {
   }
 }
 
-export const wallet = new SimpleWallet('0x0000000000000000000000000000000000000000', 'base');
+export const wallet = new SimpleWallet('0x742d35Cc6634C0532925a3b844Bc454e4438f44e', mainnet.id);
