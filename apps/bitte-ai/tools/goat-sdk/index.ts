@@ -6,9 +6,9 @@ import { wallet } from './wallet';
 type Tool = {
   name: string;
   description: string;
-  inputSchema: any; // Using any for now since JsonSchema7Type is not defined
-  execute: (params: any) => Promise<any>;
-}
+  inputSchema: unknown;
+  execute: (params: unknown) => Promise<unknown>;
+};
 
 type ToolList = Tool[];
 
@@ -17,15 +17,15 @@ export const getTools = async (): Promise<ToolList> => {
     plugins: [erc20({ tokens: [USDC, WETH] })],
     wallet: wallet,
   });
-  
+
   const rawTools = onChainToolsAdapter.listOfTools();
-  
+
   // Transform the raw tools to include the execute method
-  const tools = rawTools.map(tool => ({
+  const tools = rawTools.map((tool) => ({
     ...tool,
-    execute: async (params: any) => {
+    execute: async (params: unknown) => {
       return await onChainToolsAdapter.toolHandler(tool.name, params);
-    }
+    },
   }));
 
   return tools;

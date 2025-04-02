@@ -16,7 +16,7 @@ export interface AgentTool {
   function: {
     name: string;
     description: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, unknown>;
   };
   execution?: {
     baseUrl: string;
@@ -53,6 +53,8 @@ export interface BitteRegistry {
   agents: Agent[];
 }
 
-export function isAgent(item: any): item is Agent {
-  return item && typeof item === 'object' && 'tools' in item && Array.isArray(item.tools);
+export function isAgent(item: unknown): item is Agent {
+  return Boolean(
+    item && typeof item === 'object' && 'tools' in item && Array.isArray((item as any).tools)
+  );
 }

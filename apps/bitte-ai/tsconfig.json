@@ -23,5 +23,12 @@
     "outDir": "dist"
   },
   "include": ["index.ts", "config.ts", "tools/**/*.ts", "utils/**/*.ts", "lib/**/*.ts"],
-  "files": ["index.ts", "config.ts", "tools/goat-sdk/index.ts", "tools/goat-sdk/wallet.ts", "utils/bitte.ts", "lib/search.ts"]
+  "files": [
+    "index.ts",
+    "config.ts",
+    "tools/goat-sdk/index.ts",
+    "tools/goat-sdk/wallet.ts",
+    "utils/bitte.ts",
+    "lib/search.ts"
+  ]
 }

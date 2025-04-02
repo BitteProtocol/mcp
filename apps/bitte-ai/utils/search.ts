@@ -8,12 +8,12 @@ export interface SearchOptions {
    * Keys to search within. If not provided, search will be performed on the root level.
    */
   keys?: string[];
-  
+
   /**
    * Maximum number of results to return
    */
   limit?: number;
-  
+
   /**
    * Threshold for fuzzy matching (0.0 = exact match, 1.0 = very fuzzy)
    */
@@ -25,7 +25,7 @@ export interface SearchOptions {
  */
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
   limit: 10,
-  threshold: 0.3
+  threshold: 0.3,
 };
 
 /**
@@ -47,7 +47,7 @@ export interface SearchResult<T> {
  * @param options - Search configuration options
  * @returns Array of matched results with their scores
  */
-export function searchStringifiedObject<T = any>(
+export function searchStringifiedObject<T = unknown>(
   stringifiedObject: string,
   query: string,
   options: SearchOptions = DEFAULT_SEARCH_OPTIONS
@@ -56,7 +56,7 @@ export function searchStringifiedObject<T = any>(
     // Parse the stringified object
     const parsed = JSON.parse(stringifiedObject);
     const data = Array.isArray(parsed) ? parsed : [parsed];
-    
+
     return performSearch(data, query, options);
   } catch (error) {
     console.error('Error searching stringified object:', error);
@@ -72,7 +72,7 @@ export function searchStringifiedObject<T = any>(
  * @param options - Search configuration options
  * @returns Array of matched results with their scores
  */
-export function searchArray<T = any>(
+export function searchArray<T = unknown>(
   dataArray: T[],
   query: string,
   options: SearchOptions = DEFAULT_SEARCH_OPTIONS
@@ -81,7 +81,7 @@ export function searchArray<T = any>(
     if (!Array.isArray(dataArray)) {
       throw new Error('The data must be an array');
     }
-    
+
     return performSearch(dataArray, query, options);
   } catch (error) {
     console.error('Error searching array:', error);
@@ -92,11 +92,7 @@ export function searchArray<T = any>(
 /**
  * Internal helper to perform the actual search operation
  */
-function performSearch<T>(
-  data: T[],
-  query: string,
-  options: SearchOptions
-): SearchResult<T>[] {
+function performSearch<T>(data: T[], query: string, options: SearchOptions): SearchResult<T>[] {
   // Configure Fuse.js
   const fuseOptions = {
     includeScore: true,
@@ -104,14 +100,14 @@ function performSearch<T>(
     threshold: options.threshold ?? DEFAULT_SEARCH_OPTIONS.threshold,
     keys: options.keys ?? [],
   };
-  
+
   // Create Fuse instance
   const fuse = new Fuse(data, fuseOptions);
-  
+
   // Perform the search
   const limit = options.limit ?? DEFAULT_SEARCH_OPTIONS.limit ?? 10;
   const rawResults = fuse.search(query, { limit });
-  
+
   // Convert to our consistent result format
   return rawResults.map((result, index) => {
     return {

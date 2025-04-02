@@ -1,13 +1,8 @@
-import { z } from 'zod';
-import { services } from './tools';
 import { FastMCP } from 'fastmcp';
+import { z } from 'zod';
+import { searchAgents, searchAgentsSchema, searchTools, searchToolsSchema } from './lib/search';
+import { services } from './tools';
 import { callBitteAPI } from './utils/bitte';
-import { 
-  searchAgents, 
-  searchAgentsSchema, 
-  searchTools, 
-  searchToolsSchema 
-} from './lib/search';
 // Export configuration
 export { config } from './config';
 
@@ -27,17 +22,6 @@ export interface GetAgentByIdParams {
 export interface ExecuteAgentParams {
   agentId: string;
   input: string;
-}
-
-// Function to convert object to URLSearchParams
-function objectToParams(obj: Record<string, any>): string {
-  const params = new URLSearchParams();
-  Object.entries(obj).forEach(([key, value]) => {
-    if (value !== undefined) {
-      params.append(key, String(value));
-    }
-  });
-  return params.toString();
 }
 
 // Create and export the server
@@ -81,19 +65,22 @@ server.addTool({
   }),
   execute: async (args, { log, session }) => {
     log.info(`Executing agent with ID: ${args.agentId}`);
-    
+
     try {
       // First, search for the agent to make sure it exists
-      const searchResult = await searchAgents({
-        query: args.agentId,
-        threshold: 0.1 // Lower threshold for more exact matching
-      }, log);
-      
+      const searchResult = await searchAgents(
+        {
+          query: args.agentId,
+          threshold: 0.1, // Lower threshold for more exact matching
+        },
+        log
+      );
+
       // Check if we found a matching agent
       if (searchResult.bitteResults.length === 0) {
         throw new Error(`Agent with ID '${args.agentId}' not found`);
       }
-      
+
       // Prepare the body for the API call
       const body = {
         id: session?.id,
@@ -101,18 +88,20 @@ server.addTool({
         accountId: '', // TODO: find a way to get the account id
         messages: [{ role: 'user', content: args.input }],
       };
-      
+
       // Call the Bitte API to execute the agent
       const data = await callBitteAPI('/chat', 'POST', body, log);
-      
+
       if (typeof data === 'string') {
         return {
           content: [{ type: 'text', text: data }],
         };
       }
-      
+
       // Ensure we return a properly typed result
-      return data as any;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data) }],
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       log.error(`Error executing agent: ${errorMessage}`);
@@ -134,27 +123,45 @@ server.addTool({
   }),
   execute: async (args, { log }) => {
     log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
-    console.log("execute-tool with args", JSON.stringify(args))
-    console.log("args", args)
-    
+    console.log('execute-tool with args', JSON.stringify(args));
+    console.log('args', args);
+
     try {
       // Use searchTools to find the specified tool
-      const searchResult = await searchTools({
-        query: args.tool,
-        threshold: 0.1 // Lower threshold for more exact matching
-      }, log);
-      
+      const searchResult = await searchTools(
+        {
+          query: args.tool,
+          threshold: 0.1, // Lower threshold for more exact matching
+        },
+        log
+      );
+
       // Get the first (best) match
       const toolMatch = searchResult.combinedResults[0];
-      const tool = toolMatch.item;
+      if (!toolMatch) {
+        throw new Error(`Tool '${args.tool}' not found`);
+      }
 
-      console.log(tool)
-      
-      if (!tool || !tool.execute) {
+      const tool = toolMatch.item as {
+        execute?: (params: Record<string, unknown>) => Promise<unknown>;
+      };
+
+      if (!tool || typeof tool.execute !== 'function') {
         throw new Error(`Tool '${args.tool}' found but cannot be executed`);
       }
-      
-      return await tool.execute(JSON.parse(args.params));
+
+      const result = await tool.execute(JSON.parse(args.params));
+
+      // Ensure we return a properly typed result
+      if (typeof result === 'string') {
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result) }],
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       log.error(`Error executing tool: ${errorMessage}`);

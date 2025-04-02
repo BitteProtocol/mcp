@@ -1,9 +1,9 @@
 import { z } from 'zod';
+import { services } from '../tools';
+import { callBitteAPI } from '../utils/bitte';
 import type { Agent } from '../utils/bitte-registry';
 import { searchArray } from '../utils/search';
-import type { SearchResult, SearchOptions } from '../utils/search';
-import { callBitteAPI } from '../utils/bitte';
-import { services } from '../tools';
+import type { SearchOptions, SearchResult } from '../utils/search';
 
 // Define a type for service keys
 type ServiceKey = keyof typeof services;
@@ -12,8 +12,8 @@ type ServiceKey = keyof typeof services;
 interface GenericTool {
   name: string;
   description?: string;
-  parameters?: Record<string, any>;
-  execute: (params: Record<string, unknown>, options?: any) => Promise<any>;
+  parameters?: Record<string, unknown>;
+  execute: (params: Record<string, unknown>, options?: unknown) => Promise<unknown>;
 }
 
 /**
@@ -38,7 +38,7 @@ const DEFAULT_SEARCH_PARAMS: Omit<SearchAgentsParams, 'query'> = {
   limit: 10,
   offset: 0,
   threshold: 0.3,
-  includeServices: []
+  includeServices: [],
 };
 
 /**
@@ -58,82 +58,69 @@ export interface CombinedAgentsSearchResult {
  */
 export async function searchAgents(
   params: SearchAgentsParams,
-  log?: any
+  log?: { info?: (message: string) => void; error?: (message: string) => void }
 ): Promise<CombinedAgentsSearchResult> {
   // Merge with default parameters
   const mergedParams = { ...DEFAULT_SEARCH_PARAMS, ...params };
-  const { 
-    query, 
-    verifiedOnly, 
-    chainIds, 
-    category,
-    limit, 
-    offset, 
-    threshold, 
-    includeServices
-  } = mergedParams;
+  const { query, verifiedOnly, chainIds, category, limit, offset, threshold, includeServices } =
+    mergedParams;
 
   // Search options for Fuse.js
   const searchOptions: SearchOptions = {
-    keys: ['id','name', 'description', 'instructions', 'generatedDescription', 'category'],
+    keys: ['id', 'name', 'description', 'instructions', 'generatedDescription', 'category'],
     limit,
-    threshold
+    threshold,
   };
 
   // Initialize results
   const result: CombinedAgentsSearchResult = {
     bitteResults: [],
     serviceResults: {},
-    totalResults: 0
+    totalResults: 0,
   };
 
   // First, search Bitte API
   try {
-    log?.info(`Searching for agents with query: ${query}`);
-    
     // Build API query parameters
-    const apiParams: Record<string, any> = {
+    const apiParams: Record<string, unknown> = {
       verifiedOnly,
       limit,
-      offset
+      offset,
     };
-    
+
     if (chainIds) apiParams.chainIds = chainIds;
     if (category) apiParams.category = category;
-    
+
     // Convert object to URL search parameters
     const urlParams = new URLSearchParams();
-    Object.entries(apiParams).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(apiParams)) {
       if (value !== undefined) {
         urlParams.append(key, String(value));
       }
-    });
-    
+    }
+
     // Call Bitte API to get agents
     const endpoint = `/api/agents?${urlParams.toString()}`;
     const response = await callBitteAPI(endpoint, 'GET', undefined, log);
-    
+
     // If response is an array, search within it
     if (Array.isArray(response)) {
       // If query is "*", return all results without searching
-      if (query === "*") {
-        result.bitteResults = response.map(agent => ({ item: agent, score: 1, refIndex: 0 }));
+      if (query === '*') {
+        result.bitteResults = response.map((agent) => ({ item: agent, score: 1, refIndex: 0 }));
         result.totalResults += result.bitteResults.length;
       } else {
         // Search within the results using Fuse.js
         result.bitteResults = searchArray<Agent>(response, query, searchOptions);
         result.totalResults += result.bitteResults.length;
       }
-    } else {
-      log?.warn('Bitte API did not return an array of agents');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    log?.error(`Error searching Bitte API: ${errorMessage}`);
   }
 
   // We skip searching services as requested
-  
+
   return result;
 }
 
@@ -146,7 +133,7 @@ export const searchAgentsSchema = z.object({
   limit: z.number().optional().default(10),
   offset: z.number().optional().default(0),
   threshold: z.number().optional().default(0.3),
-  includeServices: z.array(z.string()).optional().default([])
+  includeServices: z.array(z.string()).optional().default([]),
 });
 
 /**
@@ -165,16 +152,20 @@ export interface SearchToolsParams {
 const DEFAULT_TOOLS_SEARCH_PARAMS: Omit<SearchToolsParams, 'query'> = {
   limit: 10,
   threshold: 0.3,
-  includeServices: ['goat', 'agentkit', ...Object.keys(services).filter(s => s !== 'goat' && s !== 'agentkit')]
+  includeServices: [
+    'goat',
+    'agentkit',
+    ...Object.keys(services).filter((s) => s !== 'goat' && s !== 'agentkit'),
+  ],
 };
 
 /**
  * Search results for tools
  */
 export interface ToolsSearchResult {
-  bitteResults: SearchResult<any>[];
+  bitteResults: SearchResult<unknown>[];
   serviceResults: Record<string, SearchResult<GenericTool>[]>;
-  combinedResults: SearchResult<any>[];
+  combinedResults: SearchResult<unknown>[];
   totalResults: number;
 }
 
@@ -186,7 +177,7 @@ export interface ToolsSearchResult {
  */
 export async function searchTools(
   params: SearchToolsParams,
-  log?: any
+  log?: { info?: (message: string) => void; error?: (message: string) => void }
 ): Promise<ToolsSearchResult> {
   // Merge with default parameters
   const mergedParams = { ...DEFAULT_TOOLS_SEARCH_PARAMS, ...params };
@@ -196,7 +187,7 @@ export async function searchTools(
   const searchOptions: SearchOptions = {
     keys: ['name', 'description', 'function.name', 'function.description'],
     limit,
-    threshold
+    threshold,
   };
 
   // Initialize results
@@ -204,89 +195,83 @@ export async function searchTools(
     bitteResults: [],
     serviceResults: {},
     combinedResults: [],
-    totalResults: 0
+    totalResults: 0,
   };
 
   // First, search Bitte API tools
   try {
-    log?.info(`Searching for tools with query: ${query}`);
-    
     // Call Bitte API to get tools
-    const endpoint = `/api/tools`;
+    const endpoint = '/api/tools';
     const response = await callBitteAPI(endpoint, 'GET', undefined, log);
-    
+
     // If response is an array, search within it
     if (Array.isArray(response)) {
       // If query is "*", return all results without searching
-      if (query === "*") {
-        result.bitteResults = response.map(tool => ({ item: tool, score: 1, refIndex: 0 }));
+      if (query === '*') {
+        result.bitteResults = response.map((tool) => ({ item: tool, score: 1, refIndex: 0 }));
         result.totalResults += result.bitteResults.length;
-        
+
         // Add Bitte results to combined results
         result.combinedResults.push(...result.bitteResults);
       } else {
         // Search within the results using Fuse.js
         result.bitteResults = searchArray(response, query, searchOptions);
         result.totalResults += result.bitteResults.length;
-        
+
         // Add Bitte results to combined results
         result.combinedResults.push(...result.bitteResults);
       }
     } else {
-      log?.warn('Bitte API did not return an array of tools');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    log?.error(`Error searching Bitte API tools: ${errorMessage}`);
   }
 
   // Then, search each included service
   if (includeServices && includeServices.length > 0) {
     // Make sure we're including 'goat' and 'agentkit' services
     const allServices = Array.from(new Set([...includeServices, 'goat', 'agentkit']));
-    
+
     await Promise.all(
       allServices.map(async (serviceName) => {
         try {
           // Check if service name is a valid key
           if (!(serviceName in services)) {
-            log?.warn(`Service not found: ${serviceName}`);
             return;
           }
-          
+
           const service = services[serviceName as ServiceKey];
-          
+
           // Get tools from the service
-          const tools = await service.tools() as GenericTool[];
-          
+          const tools = (await service.tools()) as GenericTool[];
+
           if (tools.length > 0) {
             // If query is "*", return all tools without searching
-            if (query === "*") {
-              result.serviceResults[serviceName] = tools.map(tool => ({ 
-                item: tool, 
-                score: 1, 
-                refIndex: 0 
+            if (query === '*') {
+              result.serviceResults[serviceName] = tools.map((tool) => ({
+                item: tool,
+                score: 1,
+                refIndex: 0,
               }));
               result.totalResults += result.serviceResults[serviceName].length;
-              
+
               // Add service results to combined results
               result.combinedResults.push(...result.serviceResults[serviceName]);
             } else {
               // Search within the tools from this service
               result.serviceResults[serviceName] = searchArray<GenericTool>(
-                tools, 
-                query, 
+                tools,
+                query,
                 searchOptions
               );
               result.totalResults += result.serviceResults[serviceName].length;
-              
+
               // Add service results to combined results
               result.combinedResults.push(...result.serviceResults[serviceName]);
             }
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          log?.error(`Error searching service ${serviceName} tools: ${errorMessage}`);
           result.serviceResults[serviceName] = [];
         }
       })
