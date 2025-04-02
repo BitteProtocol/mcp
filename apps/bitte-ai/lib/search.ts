@@ -38,7 +38,7 @@ const DEFAULT_SEARCH_PARAMS: Omit<SearchAgentsParams, 'query'> = {
   limit: 10,
   offset: 0,
   threshold: 0.3,
-  includeServices: Object.keys(services)
+  includeServices: []
 };
 
 /**
@@ -66,16 +66,16 @@ export async function searchAgents(
     query, 
     verifiedOnly, 
     chainIds, 
-    category, 
+    category,
     limit, 
     offset, 
     threshold, 
-    includeServices 
+    includeServices
   } = mergedParams;
 
   // Search options for Fuse.js
   const searchOptions: SearchOptions = {
-    keys: ['name', 'description', 'instructions', 'generatedDescription', 'category'],
+    keys: ['id','name', 'description', 'instructions', 'generatedDescription', 'category'],
     limit,
     threshold
   };
@@ -126,63 +126,8 @@ export async function searchAgents(
     log?.error(`Error searching Bitte API: ${errorMessage}`);
   }
 
-  // Then, search each included service
-  if (includeServices && includeServices.length > 0) {
-    await Promise.all(
-      includeServices.map(async (serviceName) => {
-        try {
-          // Check if service name is a valid key
-          if (!(serviceName in services)) {
-            log?.warn(`Service not found: ${serviceName}`);
-            return;
-          }
-          
-          const service = services[serviceName as ServiceKey];
-          
-          // Get tools from the service, which might include agents
-          const tools = await service.tools() as GenericTool[];
-          
-          // Extract agents from tools if possible
-          // This assumes that some tools might be or contain agents
-          // You may need to adapt this logic based on your actual service implementation
-          const agentsFromTools = tools
-            .filter((tool: GenericTool) => 
-              // Example filtering logic - adjust as needed for your use case
-              tool.parameters?.agentId || 
-              tool.name.toLowerCase().includes('agent')
-            )
-            .map((tool: GenericTool) => {
-              // Convert tool to Agent format - adjust mapping as needed
-              return {
-                id: tool.parameters?.agentId || tool.name,
-                name: tool.name,
-                accountId: '',
-                description: tool.description || '',
-                instructions: '',
-                tools: [],
-                verified: true,
-                pings: 0
-              } as Agent;
-            });
-          
-          if (agentsFromTools.length > 0) {
-            // Search within the agents from this service
-            result.serviceResults[serviceName] = searchArray<Agent>(
-              agentsFromTools, 
-              query, 
-              searchOptions
-            );
-            result.totalResults += result.serviceResults[serviceName].length;
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          log?.error(`Error searching service ${serviceName}: ${errorMessage}`);
-          result.serviceResults[serviceName] = [];
-        }
-      })
-    );
-  }
-
+  // We skip searching services as requested
+  
   return result;
 }
 
@@ -195,7 +140,7 @@ export const searchAgentsSchema = z.object({
   limit: z.number().optional().default(10),
   offset: z.number().optional().default(0),
   threshold: z.number().optional().default(0.3),
-  includeServices: z.array(z.string()).optional().default(Object.keys(services))
+  includeServices: z.array(z.string()).optional().default([])
 });
 
 /**
@@ -214,7 +159,7 @@ export interface SearchToolsParams {
 const DEFAULT_TOOLS_SEARCH_PARAMS: Omit<SearchToolsParams, 'query'> = {
   limit: 10,
   threshold: 0.3,
-  includeServices: Object.keys(services)
+  includeServices: ['goat', 'agentkit', ...Object.keys(services).filter(s => s !== 'goat' && s !== 'agentkit')]
 };
 
 /**
@@ -223,6 +168,7 @@ const DEFAULT_TOOLS_SEARCH_PARAMS: Omit<SearchToolsParams, 'query'> = {
 export interface ToolsSearchResult {
   bitteResults: SearchResult<any>[];
   serviceResults: Record<string, SearchResult<GenericTool>[]>;
+  combinedResults: SearchResult<any>[];
   totalResults: number;
 }
 
@@ -251,6 +197,7 @@ export async function searchTools(
   const result: ToolsSearchResult = {
     bitteResults: [],
     serviceResults: {},
+    combinedResults: [],
     totalResults: 0
   };
 
@@ -267,6 +214,9 @@ export async function searchTools(
       // Search within the results using Fuse.js
       result.bitteResults = searchArray(response, query, searchOptions);
       result.totalResults += result.bitteResults.length;
+      
+      // Add Bitte results to combined results
+      result.combinedResults.push(...result.bitteResults);
     } else {
       log?.warn('Bitte API did not return an array of tools');
     }
@@ -277,8 +227,11 @@ export async function searchTools(
 
   // Then, search each included service
   if (includeServices && includeServices.length > 0) {
+    // Make sure we're including 'goat' and 'agentkit' services
+    const allServices = Array.from(new Set([...includeServices, 'goat', 'agentkit']));
+    
     await Promise.all(
-      includeServices.map(async (serviceName) => {
+      allServices.map(async (serviceName) => {
         try {
           // Check if service name is a valid key
           if (!(serviceName in services)) {
@@ -299,6 +252,9 @@ export async function searchTools(
               searchOptions
             );
             result.totalResults += result.serviceResults[serviceName].length;
+            
+            // Add service results to combined results
+            result.combinedResults.push(...result.serviceResults[serviceName]);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -315,7 +271,4 @@ export async function searchTools(
 // Export zodSchema for searching tools
 export const searchToolsSchema = z.object({
   query: z.string().describe('Search query text'),
-  limit: z.number().optional().default(10),
-  threshold: z.number().optional().default(0.3),
-  includeServices: z.array(z.string()).optional().default(Object.keys(services))
 });

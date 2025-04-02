@@ -45,7 +45,8 @@ export const server = new FastMCP({
   name: 'bitte-ai-mcp-proxy',
   version: '0.0.1',
   authenticate: async (req) => {
-
+    // TODO: Implement authentication
+    // These are currently not sent by the client (Cursor for example)
     const agentId = req.headers['x-agent-id'];
     const accountId = req.headers['x-account-id'];
     const bitteApiKey = req.headers['x-bitte-api-key'];
@@ -53,26 +54,6 @@ export const server = new FastMCP({
     return {
       id: `user-${Math.random().toString(36).substring(2, 15)}`,
     };
-  },
-});
-
-// Tool to get all agents from Bitte AI API
-server.addTool({
-  name: 'get-all-agents',
-  description: 'Get a list of AI agents from the Bitte AI registry',
-  parameters: z.object({
-    verifiedOnly: z.boolean().optional().default(true),
-    chainIds: z.string().optional(),
-    category: z.string().optional(),
-    limit: z.number().optional().default(50),
-    offset: z.number().optional().default(0),
-  }),
-  execute: async (args, { log }) => {
-    log.info(`Getting agents with params: ${JSON.stringify(args)}`);
-    const params = objectToParams(args);
-    const endpoint = `/api/agents${params ? `?${params}` : ''}`;
-    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
-    return JSON.stringify(data);
   },
 });
 
@@ -91,21 +72,6 @@ server.addTool({
   },
 });
 
-// Tool to get all tools from Bitte AI API
-server.addTool({
-  name: 'search-tools',
-  description: 'Get a list of tools from the Bitte AI registry',
-  parameters: z.object({
-    random_string: z.string().optional().describe('Dummy parameter for no-parameter tools'),
-  }),
-  execute: async (args, { log }) => {
-    log.info('Getting tools');
-    const endpoint = `/api/tools`;
-    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
-    return JSON.stringify(data);
-  },
-});
-
 server.addTool({
   name: 'execute-agent',
   description: 'Execute an AI agent',
@@ -116,71 +82,45 @@ server.addTool({
   execute: async (args, { log, session }) => {
     log.info(`Executing agent with ID: ${args.agentId}`);
     
-    const body = {
-      id: session?.id,
-      agentId: args.agentId,
-      accountId: '', // TODO: find a way to get the account id
-      messages: [{ role: 'user', content: args.input }],
-    };
-    
-    const data = await callBitteAPI('/chat', 'POST', body, log);
-    
-    if (typeof data === 'string') {
-      return {
-        content: [{ type: 'text', text: data }],
-      };
-    }
-    
-    // Ensure we return a properly typed result
-    return data as any;
-  },
-});
-
-// Tool to get existing tools
-server.addTool({
-  name: 'get-existing-tools',
-  description: 'Get existing tools',
-  parameters: z.object({
-    service: z.string().describe('The service to get tools from'),
-  }),
-  execute: async (args, { log }) => {
-    log.info(`Executing get-existing-tools tool with params: ${JSON.stringify(args)}`);
-
     try {
-      let tools;
-      switch (args.service) {
-        case services.goat.name:
-          tools = await services.goat.tools();
-          break;
-        case services.agentkit.name:
-          tools = await services.agentkit.tools();
-          break;
-        default:
-          throw new Error(`Unknown service: ${args.service}`);
+      // First, search for the agent to make sure it exists
+      const searchResult = await searchAgents({
+        query: args.agentId,
+        threshold: 0.1 // Lower threshold for more exact matching
+      }, log);
+      
+      // Check if we found a matching agent
+      if (searchResult.bitteResults.length === 0) {
+        throw new Error(`Agent with ID '${args.agentId}' not found`);
       }
-      return JSON.stringify(tools);
+      
+      // Prepare the body for the API call
+      const body = {
+        id: session?.id,
+        agentId: args.agentId,
+        accountId: '', // TODO: find a way to get the account id
+        messages: [{ role: 'user', content: args.input }],
+      };
+      
+      // Call the Bitte API to execute the agent
+      const data = await callBitteAPI('/chat', 'POST', body, log);
+      
+      if (typeof data === 'string') {
+        return {
+          content: [{ type: 'text', text: data }],
+        };
+      }
+      
+      // Ensure we return a properly typed result
+      return data as any;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error getting tools: ${errorMessage}`);
+      log.error(`Error executing agent: ${errorMessage}`);
       return {
-        content: [{ type: 'text', text: `Error getting tools: ${errorMessage}` }],
+        content: [{ type: 'text', text: `Error executing agent: ${errorMessage}` }],
         isError: true,
       };
     }
-  },
-});
-
-// Tool to get available services
-server.addTool({
-  name: 'get-available-services',
-  description: 'Get a list of all available services',
-  parameters: z.object({}),
-  execute: async (args, { log }) => {
-    log.info('Executing get-available-services tool');
-    return JSON.stringify({
-      services: Object.values(services).map((service) => service.name),
-      count: Object.keys(services).length,
-    });
   },
 });
 
@@ -190,35 +130,31 @@ server.addTool({
   description: 'Execute a tool',
   parameters: z.object({
     tool: z.string().describe('The tool to execute'),
-    service: z.string().describe('The service to execute the tool from'),
-    params: z.object({}).describe('The parameters to pass to the tool'),
+    params: z.string().describe('The parameters to pass to the tool as a JSON string'),
   }),
   execute: async (args, { log }) => {
     log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
+    console.log("execute-tool with args", JSON.stringify(args))
+    console.log("args", args)
     
     try {
-      let tool;
-      switch (args.service) {
-        case services.goat.name: {
-          const goatTools = await services.goat.tools();
-          tool = goatTools.find((t) => t.name === args.tool);
-          break;
-        }
-        case services.agentkit.name: {
-          const agentkitTools = await services.agentkit.tools();
-          tool = agentkitTools.find((t) => t.name === args.tool);
-          break;
-        }
-        default:
-          throw new Error(`Unknown service: ${args.service}`);
+      // Use searchTools to find the specified tool
+      const searchResult = await searchTools({
+        query: args.tool,
+        threshold: 0.1 // Lower threshold for more exact matching
+      }, log);
+      
+      // Get the first (best) match
+      const toolMatch = searchResult.combinedResults[0];
+      const tool = toolMatch.item;
+
+      console.log(tool)
+      
+      if (!tool || !tool.execute) {
+        throw new Error(`Tool '${args.tool}' found but cannot be executed`);
       }
       
-      if (!tool) {
-        throw new Error(`Tool not found: ${args.tool}`);
-      }
-      
-      log.info(`Executing ${args.service} tool: ${args.tool}`);
-      return await tool.execute(args.params);
+      return await tool.execute(JSON.parse(args.params));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       log.error(`Error executing tool: ${errorMessage}`);

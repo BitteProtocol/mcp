@@ -3,44 +3,30 @@ import { USDC, WETH, erc20 } from '@goat-sdk/plugin-erc20';
 import { wallet } from './wallet';
 
 // Define a type for the tool objects
-type GoatTool = {
+type Tool = {
   name: string;
   description: string;
-  parameters: any;
-  execute: (params: Record<string, unknown>, options?: any) => Promise<any>;
-};
+  inputSchema: any; // Using any for now since JsonSchema7Type is not defined
+  execute: (params: any) => Promise<any>;
+}
 
-export const getTools = async (): Promise<GoatTool[]> => {
+type ToolList = Tool[];
+
+export const getTools = async (): Promise<ToolList> => {
   const onChainToolsAdapter = await getOnChainTools({
     plugins: [erc20({ tokens: [USDC, WETH] })],
     wallet: wallet,
   });
   
-  // Transform on-chain tools to the format expected by the MCP server
-  const formattedTools = onChainToolsAdapter.listOfTools().map((toolDef) => {
-    return {
-      name: toolDef.name,
-      description: toolDef.description,
-      parameters: toolDef.inputSchema,
-      execute: async (params: Record<string, unknown>, options?: any) => {
-        // Log tool execution if context is provided
-        if (options?.log) {
-          options.log.info(`Executing GOAT tool: ${toolDef.name} with params: ${JSON.stringify(params)}`);
-        }
-        
-        try {
-          const result = await onChainToolsAdapter.toolHandler(toolDef.name, params);
-          return result;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (options?.log) {
-            options.log.error(`Error executing GOAT tool ${toolDef.name}: ${errorMessage}`);
-          }
-          return `Error executing tool ${toolDef.name}: ${errorMessage}`;
-        }
-      },
-    };
-  });
+  const rawTools = onChainToolsAdapter.listOfTools();
+  
+  // Transform the raw tools to include the execute method
+  const tools = rawTools.map(tool => ({
+    ...tool,
+    execute: async (params: any) => {
+      return await onChainToolsAdapter.toolHandler(tool.name, params);
+    }
+  }));
 
-  return formattedTools;
+  return tools;
 };
