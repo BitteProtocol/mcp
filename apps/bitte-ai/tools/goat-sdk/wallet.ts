@@ -52,4 +52,4 @@ class SimpleWallet extends WalletClientBase {
   }
 }
 
-export const wallet = new SimpleWallet('0x0000000000000000000000000000000000000000', mainnet.id);
+export const wallet = new SimpleWallet('0x742d35Cc6634C0532925a3b844Bc454e4438f44e', mainnet.id);

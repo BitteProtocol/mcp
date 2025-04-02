@@ -1,5 +1,5 @@
 import { getOnChainTools } from '@goat-sdk/adapter-model-context-protocol';
-import { USDC, erc20 } from '@goat-sdk/plugin-erc20';
+import { USDC, WETH, erc20 } from '@goat-sdk/plugin-erc20';
 import { wallet } from './wallet';
 
 // Define a type for the tool objects
@@ -12,7 +12,7 @@ type GoatTool = {
 
 export const getTools = async (): Promise<GoatTool[]> => {
   const onChainToolsAdapter = await getOnChainTools({
-    plugins: [erc20({ tokens: [USDC] })],
+    plugins: [erc20({ tokens: [USDC, WETH] })],
     wallet: wallet,
   });
   

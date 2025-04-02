@@ -1,8 +1,13 @@
-import { MCP } from '@mcp-sdk/server';
 import { z } from 'zod';
-import { config } from './config';
 import { services } from './tools';
-
+import { FastMCP } from 'fastmcp';
+import { callBitteAPI } from './utils/bitte';
+import { 
+  searchAgents, 
+  searchAgentsSchema, 
+  searchTools, 
+  searchToolsSchema 
+} from './lib/search';
 // Export configuration
 export { config } from './config';
 
@@ -24,11 +29,27 @@ export interface ExecuteAgentParams {
   input: string;
 }
 
+// Function to convert object to URLSearchParams
+function objectToParams(obj: Record<string, any>): string {
+  const params = new URLSearchParams();
+  Object.entries(obj).forEach(([key, value]) => {
+    if (value !== undefined) {
+      params.append(key, String(value));
+    }
+  });
+  return params.toString();
+}
+
 // Create and export the server
-export const server = new MCP({
+export const server = new FastMCP({
   name: 'bitte-ai-mcp-proxy',
   version: '0.0.1',
   authenticate: async (req) => {
+
+    const agentId = req.headers['x-agent-id'];
+    const accountId = req.headers['x-account-id'];
+    const bitteApiKey = req.headers['x-bitte-api-key'];
+
     return {
       id: `user-${Math.random().toString(36).substring(2, 15)}`,
     };
@@ -48,38 +69,10 @@ server.addTool({
   }),
   execute: async (args, { log }) => {
     log.info(`Getting agents with params: ${JSON.stringify(args)}`);
-
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (args.verifiedOnly !== undefined)
-      params.append('verifiedOnly', args.verifiedOnly.toString());
-    if (args.chainIds) params.append('chainIds', args.chainIds);
-    if (args.category) params.append('category', args.category);
-    if (args.limit) params.append('limit', args.limit.toString());
-    if (args.offset) params.append('offset', args.offset.toString());
-
-    const url = `${config.bitteRegistryUrl}/api/agents`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      return JSON.stringify(data);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error fetching agents: ${errorMessage}`);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: 'Error fetching agents',
-          },
-        ],
-        isError: true,
-      };
-    }
+    const params = objectToParams(args);
+    const endpoint = `/api/agents${params ? `?${params}` : ''}`;
+    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
+    return JSON.stringify(data);
   },
 });
 
@@ -92,76 +85,24 @@ server.addTool({
   }),
   execute: async (args, { log }) => {
     log.info(`Getting agent with ID: ${args.agentId}`);
-
-    const url = `${config.bitteRegistryUrl}/api/agents/${args.agentId}`;
-
-    try {
-      const response = await fetch(url);
-      if (response.status === 404) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: 'Agent not found',
-            },
-          ],
-          isError: true,
-        };
-      }
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      return JSON.stringify(data);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error fetching agent: ${errorMessage}`);
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: 'Error fetching agent',
-          },
-        ],
-        isError: true,
-      };
-    }
+    const endpoint = `/api/agents/${args.agentId}`;
+    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
+    return JSON.stringify(data);
   },
 });
 
 // Tool to get all tools from Bitte AI API
 server.addTool({
-  name: 'get-all-tools',
+  name: 'search-tools',
   description: 'Get a list of tools from the Bitte AI registry',
   parameters: z.object({
     random_string: z.string().optional().describe('Dummy parameter for no-parameter tools'),
   }),
   execute: async (args, { log }) => {
     log.info('Getting tools');
-
-    const url = `${config.bitteRegistryUrl}/api/tools`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      return JSON.stringify(data);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error fetching tools: ${errorMessage}`);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: 'Error fetching tools',
-          },
-        ],
-        isError: true,
-      };
-    }
+    const endpoint = `/api/tools`;
+    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
+    return JSON.stringify(data);
   },
 });
 
@@ -174,54 +115,26 @@ server.addTool({
   }),
   execute: async (args, { log, session }) => {
     log.info(`Executing agent with ID: ${args.agentId}`);
-
-    const url = `${config.bitteRuntimeUrl}/chat`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.bitteApiKey}`,
-        },
-        body: JSON.stringify({
-          id: session?.id,
-          agentId: args.agentId,
-          accountId: '', // TODO: find a way to get the account id
-          messages: [{ role: 'user', content: args.input }],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.text();
+    
+    const body = {
+      id: session?.id,
+      agentId: args.agentId,
+      accountId: '', // TODO: find a way to get the account id
+      messages: [{ role: 'user', content: args.input }],
+    };
+    
+    const data = await callBitteAPI('/chat', 'POST', body, log);
+    
+    if (typeof data === 'string') {
       return {
-        content: [
-          {
-            type: 'text',
-            text: data,
-          },
-        ],
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error executing agent: ${errorMessage}`);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Error executing agent: ${errorMessage}`,
-          },
-        ],
-        isError: true,
+        content: [{ type: 'text', text: data }],
       };
     }
+    
+    // Ensure we return a properly typed result
+    return data as any;
   },
 });
-
-// Add tools from extra-tools
 
 // Tool to get existing tools
 server.addTool({
@@ -233,15 +146,26 @@ server.addTool({
   execute: async (args, { log }) => {
     log.info(`Executing get-existing-tools tool with params: ${JSON.stringify(args)}`);
 
-    switch (args.service) {
-      case services.goat.name:
-        const goatTools = await services.goat.tools();
-        return JSON.stringify(goatTools);
-      case services.agentkit.name:
-        const baseAgentkitTools = await services.agentkit.tools();
-        return JSON.stringify(baseAgentkitTools);
-      default:
-        throw new Error(`Unknown service: ${args.service}`);
+    try {
+      let tools;
+      switch (args.service) {
+        case services.goat.name:
+          tools = await services.goat.tools();
+          break;
+        case services.agentkit.name:
+          tools = await services.agentkit.tools();
+          break;
+        default:
+          throw new Error(`Unknown service: ${args.service}`);
+      }
+      return JSON.stringify(tools);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error getting tools: ${errorMessage}`);
+      return {
+        content: [{ type: 'text', text: `Error getting tools: ${errorMessage}` }],
+        isError: true,
+      };
     }
   },
 });
@@ -253,7 +177,6 @@ server.addTool({
   parameters: z.object({}),
   execute: async (args, { log }) => {
     log.info('Executing get-available-services tool');
-
     return JSON.stringify({
       services: Object.values(services).map((service) => service.name),
       count: Object.keys(services).length,
@@ -272,40 +195,79 @@ server.addTool({
   }),
   execute: async (args, { log }) => {
     log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
-    console.log(`[execute-tool] Starting execution for tool: ${args.tool} from service: ${args.service} with params: ${JSON.stringify(args.params)}`);
+    
+    try {
+      let tool;
+      switch (args.service) {
+        case services.goat.name: {
+          const goatTools = await services.goat.tools();
+          tool = goatTools.find((t) => t.name === args.tool);
+          break;
+        }
+        case services.agentkit.name: {
+          const agentkitTools = await services.agentkit.tools();
+          tool = agentkitTools.find((t) => t.name === args.tool);
+          break;
+        }
+        default:
+          throw new Error(`Unknown service: ${args.service}`);
+      }
+      
+      if (!tool) {
+        throw new Error(`Tool not found: ${args.tool}`);
+      }
+      
+      log.info(`Executing ${args.service} tool: ${args.tool}`);
+      return await tool.execute(args.params);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error executing tool: ${errorMessage}`);
+      return {
+        content: [{ type: 'text', text: `Error executing tool: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  },
+});
 
-    switch (args.service) {
-      case services.goat.name: {
-        console.log(`[execute-tool] Fetching GOAT tools`);
-        const goatTools = await services.goat.tools();
-        console.log(`[execute-tool] Found ${goatTools.length} GOAT tools`);
-        const tool = goatTools.find((t) => t.name === args.tool);
-        if (!tool) {
-          console.error(`[execute-tool] Tool not found: ${args.tool}`);
-          throw new Error(`Tool not found: ${args.tool}`);
-        }
-        console.log(`[execute-tool] Executing GOAT tool: ${args.tool} with params:`, args.params);
-        const result = await tool.execute(args.params);
-        console.log(`[execute-tool] GOAT tool execution completed`);
-        return result;
-      }
-      case services.agentkit.name: {
-        console.log(`[execute-tool] Fetching AgentKit tools`);
-        const baseAgentkitTools = await services.agentkit.tools();
-        console.log(`[execute-tool] Found ${baseAgentkitTools.length} AgentKit tools`);
-        const tool = baseAgentkitTools.find((t) => t.name === args.tool);
-        if (!tool) {
-          console.error(`[execute-tool] Tool not found: ${args.tool}`);
-          throw new Error(`Tool not found: ${args.tool}`);
-        }
-        console.log(`[execute-tool] Executing AgentKit tool: ${args.tool} with params:`, JSON.stringify(args.params));
-        const result = await tool.execute(args.params);
-        console.log(`[execute-tool] AgentKit tool execution completed`);
-        return result;
-      }
-      default:
-        console.error(`[execute-tool] Unknown tool: ${args.tool}`);
-        throw new Error(`Unknown tool: ${args.tool}`);
+// Tool to search for agents across Bitte API and other services
+server.addTool({
+  name: 'search-agents',
+  description: 'Search for AI agents across Bitte API and other services',
+  parameters: searchAgentsSchema,
+  execute: async (args, { log }) => {
+    log.info(`Searching agents with params: ${JSON.stringify(args)}`);
+    try {
+      const result = await searchAgents(args, log);
+      return JSON.stringify(result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error searching agents: ${errorMessage}`);
+      return {
+        content: [{ type: 'text', text: `Error searching agents: ${errorMessage}` }],
+        isError: true,
+      };
+    }
+  },
+});
+
+// Tool to search for tools across Bitte API and other services
+server.addTool({
+  name: 'search-tools',
+  description: 'Search for tools across Bitte API and other services',
+  parameters: searchToolsSchema,
+  execute: async (args, { log }) => {
+    log.info(`Searching tools with params: ${JSON.stringify(args)}`);
+    try {
+      const result = await searchTools(args, log);
+      return JSON.stringify(result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`Error searching tools: ${errorMessage}`);
+      return {
+        content: [{ type: 'text', text: `Error searching tools: ${errorMessage}` }],
+        isError: true,
+      };
     }
   },
 });
@@ -317,7 +279,6 @@ export async function startServer(port = 3000) {
     sse: {
       endpoint: '/sse',
       port,
-      host: '0.0.0.0',
     },
   });
   console.log(`Bitte AI MCP Proxy server is running on port ${port}`);
