@@ -115,9 +115,15 @@ export async function searchAgents(
     
     // If response is an array, search within it
     if (Array.isArray(response)) {
-      // Search within the results using Fuse.js
-      result.bitteResults = searchArray<Agent>(response, query, searchOptions);
-      result.totalResults += result.bitteResults.length;
+      // If query is "*", return all results without searching
+      if (query === "*") {
+        result.bitteResults = response.map(agent => ({ item: agent, score: 1, refIndex: 0 }));
+        result.totalResults += result.bitteResults.length;
+      } else {
+        // Search within the results using Fuse.js
+        result.bitteResults = searchArray<Agent>(response, query, searchOptions);
+        result.totalResults += result.bitteResults.length;
+      }
     } else {
       log?.warn('Bitte API did not return an array of agents');
     }
@@ -211,12 +217,21 @@ export async function searchTools(
     
     // If response is an array, search within it
     if (Array.isArray(response)) {
-      // Search within the results using Fuse.js
-      result.bitteResults = searchArray(response, query, searchOptions);
-      result.totalResults += result.bitteResults.length;
-      
-      // Add Bitte results to combined results
-      result.combinedResults.push(...result.bitteResults);
+      // If query is "*", return all results without searching
+      if (query === "*") {
+        result.bitteResults = response.map(tool => ({ item: tool, score: 1, refIndex: 0 }));
+        result.totalResults += result.bitteResults.length;
+        
+        // Add Bitte results to combined results
+        result.combinedResults.push(...result.bitteResults);
+      } else {
+        // Search within the results using Fuse.js
+        result.bitteResults = searchArray(response, query, searchOptions);
+        result.totalResults += result.bitteResults.length;
+        
+        // Add Bitte results to combined results
+        result.combinedResults.push(...result.bitteResults);
+      }
     } else {
       log?.warn('Bitte API did not return an array of tools');
     }
@@ -245,16 +260,29 @@ export async function searchTools(
           const tools = await service.tools() as GenericTool[];
           
           if (tools.length > 0) {
-            // Search within the tools from this service
-            result.serviceResults[serviceName] = searchArray<GenericTool>(
-              tools, 
-              query, 
-              searchOptions
-            );
-            result.totalResults += result.serviceResults[serviceName].length;
-            
-            // Add service results to combined results
-            result.combinedResults.push(...result.serviceResults[serviceName]);
+            // If query is "*", return all tools without searching
+            if (query === "*") {
+              result.serviceResults[serviceName] = tools.map(tool => ({ 
+                item: tool, 
+                score: 1, 
+                refIndex: 0 
+              }));
+              result.totalResults += result.serviceResults[serviceName].length;
+              
+              // Add service results to combined results
+              result.combinedResults.push(...result.serviceResults[serviceName]);
+            } else {
+              // Search within the tools from this service
+              result.serviceResults[serviceName] = searchArray<GenericTool>(
+                tools, 
+                query, 
+                searchOptions
+              );
+              result.totalResults += result.serviceResults[serviceName].length;
+              
+              // Add service results to combined results
+              result.combinedResults.push(...result.serviceResults[serviceName]);
+            }
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
