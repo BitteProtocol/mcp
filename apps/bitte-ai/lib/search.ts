@@ -117,6 +117,7 @@ export async function searchAgents(
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    log?.error?.(`Error searching Bitte API agents: ${errorMessage}`);
   }
 
   // We skip searching services as requested
@@ -150,8 +151,8 @@ export interface SearchToolsParams {
  * Default search options for tools
  */
 const DEFAULT_TOOLS_SEARCH_PARAMS: Omit<SearchToolsParams, 'query'> = {
-  limit: 10,
-  threshold: 0.3,
+  limit: 5,
+  threshold: 1,
   includeServices: [
     'goat',
     'agentkit',
@@ -179,13 +180,14 @@ export async function searchTools(
   params: SearchToolsParams,
   log?: { info?: (message: string) => void; error?: (message: string) => void }
 ): Promise<ToolsSearchResult> {
+  log?.info?.(`Searching tools with params: ${JSON.stringify(params)}`);
   // Merge with default parameters
   const mergedParams = { ...DEFAULT_TOOLS_SEARCH_PARAMS, ...params };
   const { query, limit, threshold, includeServices } = mergedParams;
 
   // Search options for Fuse.js
   const searchOptions: SearchOptions = {
-    keys: ['name', 'description', 'function.name', 'function.description'],
+    keys: ['id', 'name', 'description', 'function.name', 'function.description'],
     limit,
     threshold,
   };
@@ -206,14 +208,17 @@ export async function searchTools(
 
     // If response is an array, search within it
     if (Array.isArray(response)) {
+      log?.info?.('Response is an array, searching within it');
       // If query is "*", return all results without searching
       if (query === '*') {
+        log?.info?.('Query is "*", returning all results');
         result.bitteResults = response.map((tool) => ({ item: tool, score: 1, refIndex: 0 }));
         result.totalResults += result.bitteResults.length;
 
         // Add Bitte results to combined results
         result.combinedResults.push(...result.bitteResults);
       } else {
+        log?.info?.('Query is not "*", searching within the results');
         // Search within the results using Fuse.js
         result.bitteResults = searchArray(response, query, searchOptions);
         result.totalResults += result.bitteResults.length;
@@ -222,9 +227,11 @@ export async function searchTools(
         result.combinedResults.push(...result.bitteResults);
       }
     } else {
+      log?.info?.('Response is not an array, UNIMPLEMENTED');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    log?.error?.(`Error searching Bitte API tools: ${errorMessage}`);
   }
 
   // Then, search each included service
@@ -273,6 +280,7 @@ export async function searchTools(
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           result.serviceResults[serviceName] = [];
+          log?.error?.(`Error searching service ${serviceName}: ${errorMessage}`);
         }
       })
     );
