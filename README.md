@@ -51,20 +51,12 @@ bun run start
 bun run dev
 ```
 
-### Lint your code
+### Format and lint your code
 
 ```bash
-bun run lint
+bun run check
 # To fix automatically:
-bun run lint:fix
-```
-
-### Format your code
-
-```bash
-bun run format
-# To fix automatically:
-bun run format:fix
+bun run check:fix
 ```
 
 ### Run individual services

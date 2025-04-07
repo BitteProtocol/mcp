@@ -1,7 +1,7 @@
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
+import { type PluginToolSpec, createToolFromPluginSpec } from './lib/bitte-plugins';
 import { searchAgents, searchAgentsSchema, searchTools, searchToolsSchema } from './lib/search';
-import { createToolFromPluginSpec, type PluginToolSpec } from './lib/bitte-plugins';
 import { callBitteAPI } from './utils/bitte';
 // Export configuration
 export { config } from './config';
