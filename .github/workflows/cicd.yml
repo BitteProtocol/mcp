@@ -25,8 +25,7 @@ jobs:
 
       - name: Check format and lint
         run: |
-          bun run format
-          bun run lint
+          bun run check
 
         # TODO: tests
 

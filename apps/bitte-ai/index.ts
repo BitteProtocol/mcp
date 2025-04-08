@@ -1,7 +1,7 @@
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
+import { type PluginToolSpec, createToolFromPluginSpec } from './lib/bitte-plugins';
 import { searchAgents, searchAgentsSchema, searchTools, searchToolsSchema } from './lib/search';
-import { services } from './tools';
 import { callBitteAPI } from './utils/bitte';
 // Export configuration
 export { config } from './config';
@@ -22,6 +22,22 @@ export interface GetAgentByIdParams {
 export interface ExecuteAgentParams {
   agentId: string;
   input: string;
+}
+
+// Create a log wrapper that also logs to console
+function wrapLogger(log: any) {
+  return new Proxy(log, {
+    get(target, prop) {
+      const originalMethod = target[prop];
+      if (typeof originalMethod === 'function') {
+        return (...args: any[]) => {
+          console.log(`[${String(prop)}]`, ...args);
+          return originalMethod.apply(target, args);
+        };
+      }
+      return originalMethod;
+    },
+  });
 }
 
 // Create and export the server
@@ -49,9 +65,10 @@ server.addTool({
     agentId: z.string().describe('ID of the agent to retrieve'),
   }),
   execute: async (args, { log }) => {
-    log.info(`Getting agent with ID: ${args.agentId}`);
+    const wrappedLog = wrapLogger(log);
+    wrappedLog.info(`Getting agent with ID: ${args.agentId}`);
     const endpoint = `/api/agents/${args.agentId}`;
-    const data = await callBitteAPI(endpoint, 'GET', undefined, log);
+    const data = await callBitteAPI(endpoint, 'GET', undefined, wrappedLog);
     return JSON.stringify(data);
   },
 });
@@ -64,7 +81,8 @@ server.addTool({
     input: z.string().describe('Input to the agent'),
   }),
   execute: async (args, { log, session }) => {
-    log.info(`Executing agent with ID: ${args.agentId}`);
+    const wrappedLog = wrapLogger(log);
+    wrappedLog.info(`Executing agent with ID: ${args.agentId}`);
 
     try {
       // First, search for the agent to make sure it exists
@@ -73,7 +91,7 @@ server.addTool({
           query: args.agentId,
           threshold: 0.1, // Lower threshold for more exact matching
         },
-        log
+        wrappedLog
       );
 
       // Check if we found a matching agent
@@ -90,7 +108,7 @@ server.addTool({
       };
 
       // Call the Bitte API to execute the agent
-      const data = await callBitteAPI('/chat', 'POST', body, log);
+      const data = await callBitteAPI('/chat', 'POST', body, wrappedLog);
 
       if (typeof data === 'string') {
         return {
@@ -104,7 +122,7 @@ server.addTool({
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error executing agent: ${errorMessage}`);
+      wrappedLog.error(`Error executing agent: ${errorMessage}`);
       return {
         content: [{ type: 'text', text: `Error executing agent: ${errorMessage}` }],
         isError: true,
@@ -120,11 +138,16 @@ server.addTool({
   parameters: z.object({
     tool: z.string().describe('The tool to execute'),
     params: z.string().describe('The parameters to pass to the tool as a JSON string'),
+    metadata: z
+      .object({})
+      .describe(
+        'Optional metadata to pass to the tool i.e. {accountId: "123", evmAddress: "0x123"}'
+      )
+      .optional(),
   }),
   execute: async (args, { log }) => {
-    log.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
-    console.log('execute-tool with args', JSON.stringify(args));
-    console.log('args', args);
+    const wrappedLog = wrapLogger(log);
+    wrappedLog.info(`Executing execute-tool tool with params: ${JSON.stringify(args)}`);
 
     try {
       // Use searchTools to find the specified tool
@@ -133,24 +156,35 @@ server.addTool({
           query: args.tool,
           threshold: 0.1, // Lower threshold for more exact matching
         },
-        log
+        wrappedLog
       );
 
       // Get the first (best) match
       const toolMatch = searchResult.combinedResults[0];
+
       if (!toolMatch) {
         throw new Error(`Tool '${args.tool}' not found`);
       }
 
       const tool = toolMatch.item as {
         execute?: (params: Record<string, unknown>) => Promise<unknown>;
+        execution?: { baseUrl: string; path: string; httpMethod: string };
+        function?: { name: string; description: string; parameters?: any };
       };
 
-      if (!tool || typeof tool.execute !== 'function') {
+      let result: unknown;
+
+      // Check if the tool has an execution field
+      if (tool.execution && tool.function) {
+        // Create and execute a core tool with HTTP-based execution
+        const coreTool = createToolFromPluginSpec(tool as PluginToolSpec, args.metadata);
+        result = await coreTool.execute(JSON.parse(args.params));
+      } else if (tool.execute && typeof tool.execute === 'function') {
+        // Use the tool's execute method directly
+        result = await tool.execute(JSON.parse(args.params));
+      } else {
         throw new Error(`Tool '${args.tool}' found but cannot be executed`);
       }
-
-      const result = await tool.execute(JSON.parse(args.params));
 
       // Ensure we return a properly typed result
       if (typeof result === 'string') {
@@ -164,7 +198,7 @@ server.addTool({
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error executing tool: ${errorMessage}`);
+      wrappedLog.error(`Error executing tool: ${errorMessage}`);
       return {
         content: [{ type: 'text', text: `Error executing tool: ${errorMessage}` }],
         isError: true,
@@ -179,13 +213,14 @@ server.addTool({
   description: 'Search for AI agents across Bitte API and other services',
   parameters: searchAgentsSchema,
   execute: async (args, { log }) => {
-    log.info(`Searching agents with params: ${JSON.stringify(args)}`);
+    const wrappedLog = wrapLogger(log);
+    wrappedLog.info(`Searching agents with params: ${JSON.stringify(args)}`);
     try {
-      const result = await searchAgents(args, log);
+      const result = await searchAgents(args, wrappedLog);
       return JSON.stringify(result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error searching agents: ${errorMessage}`);
+      wrappedLog.error(`Error searching agents: ${errorMessage}`);
       return {
         content: [{ type: 'text', text: `Error searching agents: ${errorMessage}` }],
         isError: true,
@@ -200,13 +235,13 @@ server.addTool({
   description: 'Search for tools across Bitte API and other services',
   parameters: searchToolsSchema,
   execute: async (args, { log }) => {
-    log.info(`Searching tools with params: ${JSON.stringify(args)}`);
+    const wrappedLog = wrapLogger(log);
     try {
-      const result = await searchTools(args, log);
+      const result = await searchTools(args, wrappedLog);
       return JSON.stringify(result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      log.error(`Error searching tools: ${errorMessage}`);
+      wrappedLog.error(`Error searching tools: ${errorMessage}`);
       return {
         content: [{ type: 'text', text: `Error searching tools: ${errorMessage}` }],
         isError: true,

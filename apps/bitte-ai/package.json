@@ -13,9 +13,7 @@
     "start": "bun run dist/index.js",
     "dev": "bun --watch run index.ts",
     "build": "tsup",
-    "watch": "tsup --watch",
-    "lint": "biome check .",
-    "format": "biome format ."
+    "watch": "tsup --watch"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

@@ -93,16 +93,12 @@ export function searchArray<T = unknown>(
  * Internal helper to perform the actual search operation
  */
 function performSearch<T>(data: T[], query: string, options: SearchOptions): SearchResult<T>[] {
-  // Configure Fuse.js
-  const fuseOptions = {
+  const fuse = new Fuse(data, {
     includeScore: true,
-    includeRefIndex: true,
     threshold: options.threshold ?? DEFAULT_SEARCH_OPTIONS.threshold,
     keys: options.keys ?? [],
-  };
-
-  // Create Fuse instance
-  const fuse = new Fuse(data, fuseOptions);
+    isCaseSensitive: false,
+  });
 
   // Perform the search
   const limit = options.limit ?? DEFAULT_SEARCH_OPTIONS.limit ?? 10;

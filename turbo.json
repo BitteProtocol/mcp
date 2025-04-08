@@ -6,18 +6,18 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "lint": {
-      "outputs": []
-    },
-    "format": {
-      "outputs": []
-    },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "start": {
       "dependsOn": ["build"]
+    },
+    "check": {
+      "cache": false
+    },
+    "check:fix": {
+      "cache": false
     }
   }
 }

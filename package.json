@@ -14,10 +14,8 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "start": "turbo start",
-    "lint": "turbo lint && biome check .",
-    "lint:fix": "biome check --apply .",
-    "format": "turbo format && biome format .",
-    "format:fix": "biome format --write .",
+    "check": "biome check",
+    "check:fix": "biome check --write",
     "start:all": "bun run ./scripts/start-dev.ts",
     "docker:up": "bun run ./scripts/start-all.ts",
     "docker:down": "bun run ./scripts/docker-down.ts"
